@@ -1,14 +1,14 @@
 # LunchBuddy 🍽️
 
-A Telegram bot for managing lunch enrollments and daily reminders. LunchBuddy allows users to enroll for lunch service, set their dietary preferences, choose preferred days, and receive daily reminders about their lunch schedule.
+A Telegram bot for managing lunch enrollments and daily registration requests. LunchBuddy allows users to enroll for lunch service, set their dietary preferences, choose preferred days, and receive daily registration requests about their lunch schedule.
 
 ## Features
 
 - **User Enrollment**: Easy enrollment process with interactive conversations
 - **Dietary Preferences**: Support for Vegetarian and Non-Vegetarian options
-- **Flexible Scheduling**: Choose from Tuesday, Wednesday, and Thursday (multi-select)
-- **Daily Reminders**: Automatic reminders at 12:30 PM on Monday, Tuesday, and Wednesday
-- **Override System**: Temporary overrides for specific days
+- **Flexible Scheduling**: Choose from configurable lunch days (multi-select)
+- **Daily Registration**: Automatic registration requests at configurable time on the day before lunch
+- **Timeout Handling**: 30-minute response window with automatic default registration
 - **Database Storage**: PostgreSQL backend for persistent data storage
 - **Docker Support**: Easy deployment with Docker and Docker Compose
 
@@ -18,7 +18,6 @@ A Telegram bot for managing lunch enrollments and daily reminders. LunchBuddy al
 - `/enroll` - Start enrollment process
 - `/unenroll` - Remove enrollment
 - `/status` - Check current enrollment status
-- `/override` - Override lunch choice for tomorrow
 - `/help` - Show help information
 
 ## Prerequisites
@@ -98,8 +97,8 @@ python -m lunchbuddy.main
 | `TELEGRAM_BOT_TOKEN` | Your Telegram bot token | Required |
 | `TELEGRAM_CHAT_ID` | Your Telegram chat ID | Required |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://lunchbuddy:lunchbuddy_password@localhost:5432/lunchbuddy` |
-| `LUNCH_REMINDER_TIME` | Time for daily reminders | `12:30` |
-| `LUNCH_REMINDER_DAYS` | Days to send reminders | `Monday,Tuesday,Wednesday` |
+| `LUNCH_REMINDER_TIME` | Time for daily registration requests | `12:30` |
+| `LUNCH_DAYS` | Available lunch days | `Tuesday,Wednesday,Thursday` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `LOG_FILE` | Log file path | `logs/lunchbuddy.log` |
 
@@ -139,23 +138,24 @@ The enrollment process collects:
 1. **Full Name**: User's complete name
 2. **Email**: Work email address
 3. **Dietary Preference**: Vegetarian or Non-Vegetarian
-4. **Preferred Days**: Multiple selection from Tuesday, Wednesday, Thursday
+4. **Preferred Days**: Multiple selection from available lunch days (configurable)
 
-### Daily Reminders
+### Daily Registration Process
 
-- Reminders are sent automatically at 12:30 PM on Monday, Tuesday, and Wednesday
-- Each reminder shows:
-  - Whether lunch is scheduled for the next day
-  - User's dietary preference
-  - Option to override the default choice
-  - Regular schedule information
+- Registration requests are sent automatically at the configured time on the day before each lunch day
+- For example: If lunch is on Monday, registration requests are sent on Sunday
+- Users have 30 minutes to respond with Yes/No
+- If no response is received, users are automatically registered based on their preferred days
+- Each request shows:
+  - The date for lunch registration
+  - Clear timeout information
+  - Yes/No buttons for quick response
 
-### Override System
+### Configuration
 
-Users can override their default lunch choice for specific days:
-- Use `/override` command
-- Only available for days that are part of their regular schedule
-- Overrides are temporary and only apply to the specified day
+The lunch days and timing are fully configurable through environment variables:
+- `LUNCH_DAYS`: Comma-separated list of available days (e.g., "Monday,Tuesday,Wednesday")
+- `LUNCH_REMINDER_TIME`: Time for registration requests (e.g., "12:30")
 
 ## Development
 

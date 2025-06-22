@@ -1,9 +1,11 @@
 """Data models for LunchBuddy bot."""
 
-from datetime import datetime
-from typing import List, Optional
+from datetime import datetime, date
+from typing import List, Optional, Dict
 from enum import Enum
 from dataclasses import dataclass
+
+from .config import settings
 
 
 class DietaryPreference(Enum):
@@ -12,11 +14,20 @@ class DietaryPreference(Enum):
     NON_VEG = "non_veg"
 
 
-class WeekDay(Enum):
-    """Week days for lunch."""
-    TUESDAY = "tuesday"
-    WEDNESDAY = "wednesday"
-    THURSDAY = "thursday"
+def create_weekday_enum():
+    """Create WeekDay enum dynamically from configuration."""
+    # Create enum values from configured lunch days
+    enum_values = {}
+    for day in settings.lunch_days:
+        day_lower = day.strip().lower()
+        day_upper = day.strip().upper()
+        enum_values[day_upper] = day_lower
+    
+    return Enum('WeekDay', enum_values)
+
+
+# Create WeekDay enum dynamically
+WeekDay = create_weekday_enum()
 
 
 @dataclass
@@ -30,6 +41,18 @@ class User:
     is_enrolled: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+@dataclass
+class PendingLunchConfirmation:
+    """Pending lunch confirmation for a user."""
+    user_id: int
+    target_date: date
+    message_id: int
+    chat_id: int
+    created_at: datetime
+    response_received: bool = False
+    user_choice: Optional[bool] = None
 
 
 @dataclass

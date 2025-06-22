@@ -1,145 +1,200 @@
-"""Scheduler for lunch reminders and notifications."""
+"""Scheduler for lunch registration processing."""
 
 import logging
-import schedule
 import time
-import asyncio
-from datetime import datetime, date, timedelta
-from typing import List, Optional
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from typing import Callable, Dict, List, Optional
 
-from telegram import Bot
-from telegram.error import TelegramError
+import schedule
 
-from .models import User, WeekDay, LunchReminder
-from .database import db_manager
 from .config import settings
+from .database import db_manager
+from .models import PendingLunchConfirmation
 
 logger = logging.getLogger(__name__)
 
+# In-memory store for pending confirmations: (user_id, date) -> PendingLunchConfirmation
+pending_confirmations: Dict[tuple, PendingLunchConfirmation] = {}
+
+
+@dataclass
+class LunchRegistrationEvent:
+    """Event data for lunch registration processing."""
+
+    user_id: int
+    target_date: date
+    user_name: str
+    user_email: str
+    dietary_preference: str
+    preferred_days: List[str]
+
+
+def register_user_for_lunch(name: str, email: str, dietary_preference: str):
+    """
+    #TODO: Implement actual lunch registration logic here.
+    This function is called when user confirms they want lunch.
+    """
+    logger.info(f"Registering {name} ({email}, {dietary_preference}) for lunch.")
+    pass
+
 
 class LunchScheduler:
-    """Handles scheduling and sending lunch reminders."""
-    
-    def __init__(self, bot: Bot):
-        self.bot = bot
+    """Handles scheduling and processing lunch registrations."""
+
+    def __init__(
+        self,
+        registration_callback: Callable[[LunchRegistrationEvent], None],
+        timeout_callback: Optional[Callable[[int, date, bool], None]] = None,
+    ):
+        """
+        Initialize scheduler with callback functions that will be called
+        when registration processing should be triggered.
+
+        Args:
+            registration_callback: Function to call when registration processing should be triggered.
+                                  This function will be called from the scheduler thread
+                                  and should handle posting to the bot's event loop.
+            timeout_callback: Function to call when confirmation times out (30 minutes).
+                             This function will be called from the scheduler thread
+                             and should handle posting to the bot's event loop.
+        """
+        self.registration_callback = registration_callback
+        self.timeout_callback = timeout_callback
         self.setup_schedule()
-    
+
     def setup_schedule(self):
-        """Setup the daily reminder schedule."""
-        # Schedule reminders for Monday, Tuesday, Wednesday at 12:30 PM
-        schedule.every().monday.at(settings.lunch_reminder_time).do(self.send_daily_reminders)
-        schedule.every().tuesday.at(settings.lunch_reminder_time).do(self.send_daily_reminders)
-        schedule.every().wednesday.at(settings.lunch_reminder_time).do(self.send_daily_reminders)
+        """Setup schedule based on lunch_days configuration."""
+        # Get the configured lunch days
+        lunch_days = settings.lunch_days
         
-        logger.info(f"Lunch reminders scheduled for {settings.lunch_reminder_time} on Monday, Tuesday, Wednesday")
-    
-    def send_daily_reminders(self):
-        """Send daily lunch reminders to all enrolled users."""
+        # Schedule registration processing one day before each lunch day at 12:30 PM
+        for day in lunch_days:
+            day_lower = day.strip().lower()
+            
+            # Map day names to schedule methods
+            day_mapping = {
+                "monday": schedule.every().monday,
+                "tuesday": schedule.every().tuesday,
+                "wednesday": schedule.every().wednesday,
+                "thursday": schedule.every().thursday,
+                "friday": schedule.every().friday,
+                "saturday": schedule.every().saturday,
+                "sunday": schedule.every().sunday,
+            }
+            
+            # Map lunch days to the day before when we should schedule the process
+            day_before_mapping = {
+                "monday": "sunday",      # Process on Sunday for Monday lunch
+                "tuesday": "monday",     # Process on Monday for Tuesday lunch
+                "wednesday": "tuesday",  # Process on Tuesday for Wednesday lunch
+                "thursday": "wednesday", # Process on Wednesday for Thursday lunch
+                "friday": "thursday",    # Process on Thursday for Friday lunch
+                "saturday": "friday",    # Process on Friday for Saturday lunch
+                "sunday": "saturday",    # Process on Saturday for Sunday lunch
+            }
+            
+            if day_lower in day_mapping:
+                # Get the day before when we should schedule the process
+                day_before = day_before_mapping.get(day_lower)
+                if day_before and day_before in day_mapping:
+                    # Schedule registration processing on the day before at the configured time
+                    day_mapping[day_before].at(settings.lunch_reminder_time).do(
+                        self.process_lunch_registration
+                    )
+                    logger.info(
+                        f"Scheduled lunch registration processing for {day} (process on {day_before} at {settings.lunch_reminder_time})"
+                    )
+                else:
+                    logger.warning(f"Could not determine day before for {day}")
+            else:
+                logger.warning(f"Invalid day '{day}' in lunch_days configuration")
+
+    def process_lunch_registration(self):
+        """Process lunch registration for the next day."""
         try:
-            # Run the async function in a new event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self._send_daily_reminders_async())
-            loop.close()
-        except Exception as e:
-            logger.error(f"Error sending daily reminders: {e}")
-    
-    async def _send_daily_reminders_async(self):
-        """Async implementation of daily reminders."""
-        try:
-            # Get all enrolled users
+            logger.info("Processing lunch registration for the next day.")
             users = db_manager.get_enrolled_users()
             if not users:
-                logger.info("No enrolled users found for reminders")
+                logger.info("No enrolled users for lunch registration.")
                 return
-            
-            # Get tomorrow's date
+                
             tomorrow = date.today() + timedelta(days=1)
             tomorrow_day = tomorrow.strftime("%A").lower()
             
-            logger.info(f"Sending lunch reminders for {tomorrow.strftime('%A, %B %d')}")
-            
-            # Send reminders to each user
             for user in users:
-                await self._send_user_reminder(user, tomorrow, tomorrow_day)
+                # Check if tomorrow is in user's preferred days
+                if tomorrow_day in [d.value for d in user.preferred_days]:
+                    # Create event data
+                    event = LunchRegistrationEvent(
+                        user_id=user.telegram_id,
+                        target_date=tomorrow,
+                        user_name=user.full_name,
+                        user_email=user.email,
+                        dietary_preference=user.dietary_preference.value,
+                        preferred_days=[d.value for d in user.preferred_days],
+                    )
+                    
+                    # Trigger the callback to process registration
+                    self.registration_callback(event)
+                    
+                    # Schedule timeout check for this user
+                    self.schedule_timeout_check(user.telegram_id, tomorrow)
+                    
+        except Exception as e:
+            logger.error(f"Error processing lunch registration: {e}")
+
+    def schedule_timeout_check(self, user_id: int, target_date: date):
+        """Schedule a timeout check for 30 minutes from now."""
+        def timeout_handler():
+            self.handle_registration_timeout(user_id, target_date)
+        
+        # Schedule timeout check for 30 minutes from now
+        schedule.every(30).minutes.do(timeout_handler).tag(
+            f"timeout_{user_id}_{target_date}"
+        )
+        logger.info(f"Scheduled timeout check for user {user_id} on {target_date}")
+
+    def handle_registration_timeout(self, user_id: int, target_date: date):
+        """Handle registration timeout - assume default preference."""
+        try:
+            key = (user_id, target_date)
+            confirmation = pending_confirmations.get(key)
+            
+            if confirmation and not confirmation.response_received:
+                # Check if the target date is in user's preferred days
+                user = db_manager.get_user(user_id)
+                if user:
+                    target_day = target_date.strftime("%A").lower()
+                    take_lunch = target_day in [d.value for d in user.preferred_days]
+                    
+                    # Register for lunch only if it's a preferred day
+                    if take_lunch:
+                        register_user_for_lunch(
+                            user.full_name, user.email, user.dietary_preference.value
+                        )
+                    
+                    # Notify user about timeout and default action
+                    if self.timeout_callback:
+                        self.timeout_callback(user_id, target_date, take_lunch)
+                    
+                    # Clean up
+                    del pending_confirmations[key]
+                    
+                    # Remove the timeout schedule
+                    schedule.clear(f"timeout_{user_id}_{target_date}")
+                    
+                    logger.info(
+                        f"Registration timeout for user {user_id} on {target_date}, defaulted to {'lunch' if take_lunch else 'no lunch'}"
+                    )
                 
         except Exception as e:
-            logger.error(f"Error in daily reminders: {e}")
-    
-    async def _send_user_reminder(self, user: User, tomorrow: date, tomorrow_day: str):
-        """Send reminder to a specific user."""
-        try:
-            # Check if tomorrow is one of user's preferred days
-            has_lunch_scheduled = tomorrow_day in [day.value for day in user.preferred_days]
-            
-            # Check for override
-            override = db_manager.get_lunch_override(user.telegram_id, tomorrow)
-            
-            # Determine final lunch status
-            if override is not None:
-                final_lunch_status = override
-                override_applied = True
-            else:
-                final_lunch_status = has_lunch_scheduled
-                override_applied = False
-            
-            # Create reminder message
-            message = self._create_reminder_message(user, tomorrow, final_lunch_status, override_applied)
-            
-            # Send message
-            await self.bot.send_message(
-                chat_id=user.telegram_id,
-                text=message,
-                parse_mode='HTML'
-            )
-            
-            logger.info(f"Reminder sent to user {user.telegram_id} ({user.full_name})")
-            
-        except TelegramError as e:
-            logger.error(f"Failed to send reminder to user {user.telegram_id}: {e}")
-        except Exception as e:
-            logger.error(f"Error sending reminder to user {user.telegram_id}: {e}")
-    
-    def _create_reminder_message(self, user: User, tomorrow: date, has_lunch: bool, override_applied: bool) -> str:
-        """Create the reminder message for a user."""
-        tomorrow_str = tomorrow.strftime("%A, %B %d")
-        
-        if has_lunch:
-            status_emoji = "✅"
-            status_text = "You have lunch scheduled"
-        else:
-            status_emoji = "❌"
-            status_text = "You do not have lunch scheduled"
-        
-        message = f"""
-🍽️ <b>Lunch Reminder for {tomorrow_str}</b>
+            logger.error(f"Error handling registration timeout: {e}")
 
-{status_emoji} {status_text}
-
-👤 <b>Name:</b> {user.full_name}
-🥬 <b>Dietary Preference:</b> {user.dietary_preference.value.title()}
-        """
-        
-        if override_applied:
-            message += "\n⚠️ <i>This is an override from your default schedule</i>"
-        
-        message += f"""
-
-💡 <b>Need to change?</b>
-Use /override to modify your lunch choice for tomorrow only.
-
-📅 <b>Your regular schedule:</b>
-{', '.join([day.value.title() for day in user.preferred_days])}
-
-For any questions, contact your admin.
-        """
-        
-        return message.strip()
-    
     def run_scheduler(self):
         """Run the scheduler loop."""
-        logger.info("Starting lunch reminder scheduler...")
-        
+        logger.info("Starting lunch registration scheduler...")
+
         while True:
             try:
                 schedule.run_pending()
@@ -150,34 +205,3 @@ For any questions, contact your admin.
             except Exception as e:
                 logger.error(f"Scheduler error: {e}")
                 time.sleep(60)  # Wait before retrying
-    
-    def send_test_reminder(self, user_id: int):
-        """Send a test reminder to a specific user (for testing)."""
-        try:
-            user = db_manager.get_user(user_id)
-            if not user:
-                logger.error(f"User {user_id} not found")
-                return False
-            
-            tomorrow = date.today() + timedelta(days=1)
-            tomorrow_day = tomorrow.strftime("%A").lower()
-            has_lunch = tomorrow_day in [day.value for day in user.preferred_days]
-            
-            message = self._create_reminder_message(user, tomorrow, has_lunch, False)
-            
-            # Run in async context
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self.bot.send_message(
-                chat_id=user_id,
-                text=message,
-                parse_mode='HTML'
-            ))
-            loop.close()
-            
-            logger.info(f"Test reminder sent to user {user_id}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error sending test reminder: {e}")
-            return False 
