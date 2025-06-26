@@ -62,7 +62,7 @@ Preferred Days: {days}
 You'll receive registration requests at {reminder_time} on the day before each lunch day ({days_list}).
 """
 
-ENROLL_FAILED = "❌ Failed to complete enrollment. Please try again later."
+ENROLL_FAILED = "❌ Failed to complete enrollment. Please try again later, or contact support if the issue continues."
 SELECTED_DAYS_TEMPLATE = """
 ✅ Dietary Preference: {diet}
 

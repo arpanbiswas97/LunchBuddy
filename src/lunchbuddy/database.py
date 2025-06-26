@@ -81,7 +81,7 @@ class DatabaseManager:
                             user.full_name,
                             user.email,
                             user.dietary_preference.value,
-                            [day.value for day in user.preferred_days],
+                            user.preferred_days,
                         ),
                     )
 
