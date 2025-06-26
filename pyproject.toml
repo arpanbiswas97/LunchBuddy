@@ -1,57 +1,29 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "lunchbuddy"
-version = "1.0.0"
-description = "A Telegram bot for managing lunch enrollments"
-authors = [
-    {name = "LunchBuddy Team", email = "team@lunchbuddy.com"}
-]
+version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9"
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+authors = [
+    { name = "Arpan Biswas", email = "arpanbiswas97@gmail.com" }
 ]
+requires-python = ">=3.13"
 dependencies = [
-    "python-telegram-bot>=20.0",
-    "psycopg2-binary>=2.9.0",
-    "python-dotenv>=1.0.0",
-    "schedule>=1.2.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
+    "apscheduler>=3.11.0",
+    "playwright>=1.52.0",
+    "psycopg2-binary>=2.9.10",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "python-telegram-bot>=22.1",
 ]
 
 [project.scripts]
-lunchbuddy = "lunchbuddy.main:main"
+lunchbuddy = "lunchbuddy:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["lunchbuddy*"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.black]
-line-length = 88
-target-version = ['py39']
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true 
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]

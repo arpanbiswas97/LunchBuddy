@@ -1,5 +1,3 @@
-"""Database operations for LunchBuddy bot."""
-
 import logging
 from contextlib import contextmanager
 from typing import List, Optional
@@ -8,7 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from .config import settings
-from .models import DietaryPreference, User, WeekDay
+from .models import DietaryPreference, User
 
 logger = logging.getLogger(__name__)
 
@@ -134,9 +132,7 @@ class DatabaseManager:
                             dietary_preference=DietaryPreference(
                                 row["dietary_preference"]
                             ),
-                            preferred_days=[
-                                WeekDay(day) for day in row["preferred_days"]
-                            ],
+                            preferred_days=row["preferred_days"],
                             is_enrolled=row["is_enrolled"],
                             created_at=row["created_at"],
                             updated_at=row["updated_at"],
@@ -167,9 +163,7 @@ class DatabaseManager:
                                 dietary_preference=DietaryPreference(
                                     row["dietary_preference"]
                                 ),
-                                preferred_days=[
-                                    WeekDay(day) for day in row["preferred_days"]
-                                ],
+                                preferred_days=row["preferred_days"],
                                 is_enrolled=row["is_enrolled"],
                                 created_at=row["created_at"],
                                 updated_at=row["updated_at"],
