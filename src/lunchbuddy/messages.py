@@ -79,17 +79,22 @@ UNENROLL_FAILURE = "❌ You are not currently enrolled for lunch service."
 
 # Lunch Confirmation
 LUNCH_CONFIRMATION_TEMPLATE = """
-🍽️ Do you want lunch for {date}?
-
-Please respond within 30 minutes. If no response is received, you will be automatically registered for lunch.
+🍽️ Do you want lunch for tomorrow??
 """
 
-LUNCH_TIMEOUT_TEMPLATE = """
-⏰ No response received within 30 minutes for lunch on {date}.
+LUNCH_CONFIRMATION_YES = "Thanks for confirming! Lunch will be arranged for you tomorrow. 🍽️"
 
-{status_icon} You have been {status_text} for lunch.
+LUNCH_CONFIRMATION_NO = "No worries! Lunch will not be arranged for you tomorrow."
+
+
+LUNCH_TIMEOUT_OPT_IN = """
+⏰ No response received within 30 minutes.
+Your lunch will be automatically arranged for you tomorrow as per your preferences.
 """
 
-LUNCH_RESPONSE_TEMPLATE = "{status_icon} Your lunch registration for {date} has been {status_text}."
+LUNCH_TIMEOUT_OPT_OUT = """
+⏰ No response received within 30 minutes.
+Your lunch will not be arranged for you tomorrow as per your preferences.
+"""
 
 LUNCH_CONFIRMATION_EXPIRED = "This confirmation is no longer active or already recorded."

@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import re
+from datetime import datetime, time, timedelta
 from enum import IntEnum, auto
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -30,6 +32,17 @@ class EnrollmentStates(IntEnum):
 
 # User data keys
 USER_DATA_KEY = "user_data"
+LUNCH_CONFIRMATION_KEY = "user_confirmation"
+
+PREVIOUS_DAY_MAP = {
+    "tuesday": 0,
+    "wednesday": 1,
+    "thursday": 2,
+    "friday": 3,
+    "saturday": 4,
+    "sunday": 5,
+    "monday": 6,
+}
 
 
 class LunchBuddyBot:
@@ -69,6 +82,41 @@ class LunchBuddyBot:
 
         self.application.add_error_handler(self.error_handler)
 
+        self.application.bot_data[LUNCH_CONFIRMATION_KEY] = {
+            "positive_response": set(),
+            "negative_response": set(),
+            "window_open": False,
+        }
+
+        # Schedule the reminder job
+        reminder_hour, reminder_minute = map(
+            int, settings.lunch_reminder_time.split(":")
+        )
+        self.application.job_queue.run_daily(
+            self.send_lunch_reminders,
+            time=time(hour=reminder_hour, minute=reminder_minute),
+            days=[PREVIOUS_DAY_MAP[day.strip().lower()] for day in settings.lunch_days],
+        )
+
+        self.application.add_handler(
+            CallbackQueryHandler(
+                self.handle_lunch_response, pattern=r"^lunch_(yes|no)$"
+            )
+        )
+
+        # Schedule the booking job
+        self.application.job_queue.run_daily(
+            self.process_lunch_bookings,
+            time=(
+                datetime.combine(
+                    datetime.today().date(),
+                    time(hour=reminder_hour, minute=reminder_minute),
+                )
+                + timedelta(minutes=30)
+            ).time(),
+            days=[PREVIOUS_DAY_MAP[day.strip().lower()] for day in settings.lunch_days],
+        )
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(messages.WELCOME_MESSAGE.strip())
 
@@ -94,7 +142,7 @@ class LunchBuddyBot:
                 email=user.email,
                 diet=user.dietary_preference.value.title(),
                 days=", ".join(user.preferred_days),
-                enrolled=user.is_enrolled
+                enrolled=user.is_enrolled,
             ).strip()
         )
 
@@ -294,6 +342,105 @@ class LunchBuddyBot:
         logger.error(f"Exception while handling an update: {context.error}")
         if update:
             logger.error(f"Update {update} caused error {context.error}")
+
+    async def send_lunch_reminders(self, context: ContextTypes.DEFAULT_TYPE):
+        context.bot_data[LUNCH_CONFIRMATION_KEY]["positive_response"] = set()
+        context.bot_data[LUNCH_CONFIRMATION_KEY]["negative_response"] = set()
+        context.bot_data[LUNCH_CONFIRMATION_KEY]["window_open"] = True
+        users = db_manager.get_enrolled_users()
+
+        async def send_reminder(user):
+            try:
+                keyboard = [
+                    [
+                        InlineKeyboardButton("👍 Yes", callback_data="lunch_yes"),
+                        InlineKeyboardButton("👎 No", callback_data="lunch_no"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await context.bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=messages.LUNCH_CONFIRMATION_TEMPLATE.strip(),
+                    reply_markup=reply_markup,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send reminder to {user.telegram_id}")
+                logger.exception(e)
+
+        tasks = [send_reminder(user) for user in users]
+
+        await asyncio.gather(*tasks)
+
+    async def handle_lunch_response(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        id = update.effective_user.id
+        query = update.callback_query
+        await query.answer()
+        response = query.data
+        if context.bot_data[LUNCH_CONFIRMATION_KEY]["window_open"]:
+            if response == "lunch_yes":
+                context.bot_data[LUNCH_CONFIRMATION_KEY]["positive_response"].add(id)
+                await query.edit_message_text(messages.LUNCH_CONFIRMATION_YES.strip())
+            elif response == "lunch_no":
+                context.bot_data[LUNCH_CONFIRMATION_KEY]["negative_response"].add(id)
+                await query.edit_message_text(messages.LUNCH_CONFIRMATION_NO.strip())
+        else:
+            await query.edit_message_text(messages.LUNCH_CONFIRMATION_EXPIRED.strip())
+
+    async def process_lunch_bookings(self, context: ContextTypes.DEFAULT_TYPE):
+        context.bot_data[LUNCH_CONFIRMATION_KEY]["window_open"] = False
+        yes_responders = context.bot_data[LUNCH_CONFIRMATION_KEY]["positive_response"]
+        no_responders = context.bot_data[LUNCH_CONFIRMATION_KEY]["negative_response"]
+        users = db_manager.get_enrolled_users()
+        # Get what day of the week is tomorrow
+        tomorrow = (datetime.today() + timedelta(days=1)).strftime("%A").lower()
+
+        tasks = []
+
+        for user in users:
+
+            async def process_user(user=user):
+                try:
+                    if user.telegram_id in yes_responders:
+                        logger.info(
+                            f"Booking lunch for user {user.telegram_id} ({user.full_name})"
+                        )
+                        await self.book_lunch(user.email, user.dietary_preference)
+                    elif user.telegram_id in no_responders:
+                        logger.info(
+                            f"User {user.telegram_id} ({user.full_name}) has not opted for lunch tomorrow"
+                        )
+                    else:
+                        if tomorrow in user.preferred_days:
+                            await context.bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=messages.LUNCH_TIMEOUT_OPT_IN.strip(),
+                            )
+                            logger.info(
+                                f"Booking lunch for user {user.telegram_id} ({user.full_name})"
+                            )
+                            await self.book_lunch(user.email, user.dietary_preference)
+                        else:
+                            await context.bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=messages.LUNCH_TIMEOUT_OPT_OUT.strip(),
+                            )
+                            logger.info(
+                                f"User {user.telegram_id} ({user.full_name}) has not opted for lunch tomorrow"
+                            )
+                except Exception as e:
+                    logger.error(
+                        f"Failed to book lunch for user {user.telegram_id} ({user.full_name})"
+                    )
+                    logger.exception(e)
+
+            tasks.append(process_user())
+
+        await asyncio.gather(*tasks)
+
+    async def book_lunch(self, email: str, dietary_preference: DietaryPreference):
+        pass
 
     def run(self):
         """Run the bot."""
