@@ -25,6 +25,9 @@ class Settings(BaseSettings):
         "thursday",
     ]
 
+    # Form Configuration
+    ia_url: str
+
     class Config:
         env_file = ".env"
         case_sensitive = False

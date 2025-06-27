@@ -19,6 +19,7 @@ from . import messages
 from .config import settings
 from .database import db_manager
 from .models import DietaryPreference, User
+from .processor import BrowserAutomator
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class LunchBuddyBot:
             Application.builder().token(settings.telegram_bot_token).build()
         )
         self.setup_handlers()
+        self.browser_automator = BrowserAutomator()
 
     def setup_handlers(self):
         # Command Handlers
@@ -440,7 +442,7 @@ class LunchBuddyBot:
         await asyncio.gather(*tasks)
 
     async def book_lunch(self, email: str, dietary_preference: DietaryPreference):
-        pass
+        await self.browser_automator.run_all(settings.ia_url, email, dietary_preference)
 
     def run(self):
         """Run the bot."""

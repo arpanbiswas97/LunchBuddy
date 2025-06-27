@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.13-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -15,6 +15,9 @@ COPY . .
 
 # Install dependencies
 RUN uv sync --locked
+
+# Install browsers
+RUN uv run playwright install --with-deps chromium
 
 # Create non-root user for security
 RUN adduser --disabled-password --gecos '' appuser \
