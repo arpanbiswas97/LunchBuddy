@@ -1,8 +1,11 @@
-from playwright.async_api import async_playwright
-from .models import DietaryPreference
 import logging
 
+from playwright.async_api import async_playwright
+
+from .models import DietaryPreference
+
 logger = logging.getLogger(__name__)
+
 
 class BrowserAutomator:
     def __init__(self):
@@ -30,7 +33,9 @@ class BrowserAutomator:
         await self.browser.close()
         await self.playwright.stop()
 
-    async def run_all(self, ia_url: str, email: str, dietary_preference: DietaryPreference):
+    async def run_all(
+        self, ia_url: str, email: str, dietary_preference: DietaryPreference
+    ):
         await self.start()
         logger.info("Browser started and Playwright initialized")
 
@@ -40,7 +45,9 @@ class BrowserAutomator:
         await self.button_click("button:has-text('Get Started')")
         logger.info("Clicked 'Get Started' button")
 
-        await self.fill_text_field("#inpt.ushur-visualmenu-open-input.ushurapp-input.form-control", email)
+        await self.fill_text_field(
+            "#inpt.ushur-visualmenu-open-input.ushurapp-input.form-control", email
+        )
         logger.info(f"Entered email: {email}")
 
         await self.button_click("button:has-text('Done')")
@@ -57,4 +64,3 @@ class BrowserAutomator:
 
         await self.stop()
         logger.info("Browser closed and session ended")
-

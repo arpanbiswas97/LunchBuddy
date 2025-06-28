@@ -18,15 +18,16 @@ class Settings(BaseSettings):
     )
 
     # Lunch Reminder Configuration
-    lunch_reminder_time: str = "12:30"      # 24h time format
+    lunch_reminder_time: str = "07:00"      # 24h time format
+    lunch_reminder_timeout: int = 30        # timeout (in minutes) to respond to the lunch reminder
     lunch_days: List[str] = [               # days when lunch is available
         "tuesday",
         "wednesday",
         "thursday",
     ]
 
-    # Form Configuration
-    ia_url: str
+    # Lunch Form Configuration
+    form_url: str
 
     class Config:
         env_file = ".env"

@@ -114,7 +114,7 @@ class LunchBuddyBot:
                     datetime.today().date(),
                     time(hour=reminder_hour, minute=reminder_minute),
                 )
-                + timedelta(minutes=30)
+                + timedelta(minutes=settings.lunch_reminder_timeout)
             ).time(),
             days=[PREVIOUS_DAY_MAP[day.strip().lower()] for day in settings.lunch_days],
         )
@@ -442,7 +442,7 @@ class LunchBuddyBot:
         await asyncio.gather(*tasks)
 
     async def book_lunch(self, email: str, dietary_preference: DietaryPreference):
-        await self.browser_automator.run_all(settings.ia_url, email, dietary_preference)
+        await self.browser_automator.run_all(settings.form_url, email, dietary_preference)
 
     def run(self):
         """Run the bot."""
