@@ -1,11 +1,8 @@
 import logging
-
 from playwright.async_api import async_playwright
-
 from .models import DietaryPreference
 
 logger = logging.getLogger(__name__)
-
 
 class BrowserAutomator:
     def __init__(self):
@@ -26,8 +23,9 @@ class BrowserAutomator:
     async def fill_text_field(self, selector: str, value: str):
         await self.page.fill(selector, value)
 
-    async def button_click(self, selector):
-        await self.page.click(selector)
+    async def button_click(self, selector, timeout=30000):
+        # Timeout is in milliseconds and default value is 30s
+        await self.page.click(selector, timeout=timeout)
 
     async def stop(self):
         await self.browser.close()
@@ -42,8 +40,13 @@ class BrowserAutomator:
         await self.navigate(ia_url)
         logger.info(f"Navigated to URL: {ia_url}")
 
-        await self.button_click("button:has-text('Get Started')")
-        logger.info("Clicked 'Get Started' button")
+        try:
+            # Check if Engagement Start screen appears, timeout is 3s
+            await self.button_click("button:has-text('Get Started')", 3000)
+            logger.info("Clicked 'Get Started' button")
+        except Exception as e:
+            # If it doesn't then just continue
+            pass
 
         await self.fill_text_field(
             "#inpt.ushur-visualmenu-open-input.ushurapp-input.form-control", email
