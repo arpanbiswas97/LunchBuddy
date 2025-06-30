@@ -26,6 +26,14 @@ class BrowserAutomator:
     async def button_click(self, selector, timeout=30000):
         # Timeout is in milliseconds and default value is 30s
         await self.page.click(selector, timeout=timeout)
+    
+    async def is_element_with_text_present(self, selector: str, text: str, timeout: int = 3000) -> bool:
+        try:
+            await self.page.wait_for_selector(f"{selector}:has-text('{text}')", timeout=timeout)
+            return True
+        except:
+            return False
+
 
     async def stop(self):
         await self.browser.close()
@@ -53,17 +61,22 @@ class BrowserAutomator:
         )
         logger.info(f"Entered email: {email}")
 
-        await self.button_click("button:has-text('Done')")
-        logger.info("Clicked first 'Done' button after entering email")
+        await self.button_click("button:has-text('Next')")
+        logger.info("Clicked first 'Next' button after entering email")
 
-        await self.button_click("span:has-text('yes')")
+        await self.button_click("span:has-text('Yes')")
         logger.info("Clicked 'Yes' confirmation")
 
         await self.button_click(f"span:has-text('{dietary_preference.value}')")
         logger.info(f"Selected dietary preference: {dietary_preference.value}")
 
-        await self.button_click("button:has-text('Done')")
-        logger.info("Clicked final 'Done' button to submit dietary preference")
+        await self.button_click("button:has-text('Next')")
+        logger.info("Clicked final 'Next' button to submit dietary preference")
+
+        if await self.is_element_with_text_present("h2", "Thank you!"):
+            logger.info("Successfully registered for lunch.")
+        else:
+            logger.warning("Could not confirm registration for lunch.")
 
         await self.stop()
         logger.info("Browser closed and session ended")

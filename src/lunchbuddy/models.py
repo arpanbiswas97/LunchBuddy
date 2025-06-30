@@ -8,8 +8,8 @@ from pydantic import BaseModel
 class DietaryPreference(Enum):
     """User dietary preferences."""
 
-    VEG = "veg"
-    NON_VEG = "non_veg"
+    VEG = "Veg"
+    NON_VEG = "Non Veg"
 
 
 class User(BaseModel):
