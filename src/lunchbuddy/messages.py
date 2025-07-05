@@ -45,7 +45,6 @@ Verified: {verified}
 """
 
 # Enrollment
-ALREADY_ENROLLED = "❌ You are already enrolled! Use /status to check your details or /unenroll to remove your enrollment."
 ENROLLMENT_WELCOME = (
     "🍽️ Welcome to LunchBuddy enrollment!\n\nPlease provide your full name:"
 )

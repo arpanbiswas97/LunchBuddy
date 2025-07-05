@@ -62,7 +62,7 @@ class DatabaseManager:
                         id SERIAL PRIMARY KEY,
                         telegram_id BIGINT UNIQUE NOT NULL,
                         full_name VARCHAR(255) NOT NULL,
-                        email VARCHAR(255) NOT NULL,
+                        email VARCHAR(255) NOT NULL
                     )
                 """
                 )
@@ -132,7 +132,7 @@ class DatabaseManager:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
                         """
-                        SELECT * FROM users WHERE telegram_id = %s AND is_enrolled = TRUE AND is_verified = TRUE
+                        SELECT * FROM users WHERE telegram_id = %s AND is_enrolled = TRUE
                     """,
                         (telegram_id,),
                     )
@@ -200,18 +200,18 @@ class DatabaseManager:
                     """
                     )
 
-                    users = []
+                    admins = []
                     for row in cursor.fetchall():
-                        users.append(
-                            User(
+                        admins.append(
+                            Admin(
                                 telegram_id=row["telegram_id"],
                                 full_name=row["full_name"],
                                 email=row["email"],
                             )
                         )
-                    return users
+                    return admins
         except Exception as e:
-            logger.error(f"Error getting enrolled users: {e}")
+            logger.error(f"Error getting admins: {e}")
             return []
 
     def approve_user(self, telegram_id: int) -> bool:
@@ -242,7 +242,7 @@ class DatabaseManager:
                     cursor.execute(
                         """
                         UPDATE users
-                        SET is_enrolled = FALSE, is_verified = FALSE, updated_at = CURRENT_TIMESTAMP
+                        SET is_verified = FALSE, updated_at = CURRENT_TIMESTAMP
                         WHERE telegram_id = %s
                     """,
                         (telegram_id,),

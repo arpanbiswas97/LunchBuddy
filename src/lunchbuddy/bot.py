@@ -157,12 +157,6 @@ class LunchBuddyBot:
     async def enroll_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
 
-        # Check if already enrolled
-        existing_user = db_manager.get_user(user_id)
-        if existing_user:
-            await update.message.reply_text(messages.ALREADY_ENROLLED.strip())
-            return ConversationHandler.END
-
         # Initalize user data
         context.user_data[USER_DATA_KEY] = {"telegram_id": user_id}
 
@@ -297,6 +291,9 @@ class LunchBuddyBot:
                         days=days_text,
                     ).strip()
                 )
+
+                # Trigger verification
+                await self.verify_user(user, context)
             else:
                 await query.edit_message_text(messages.ENROLL_FAILED.strip())
 
