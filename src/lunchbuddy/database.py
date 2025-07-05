@@ -6,7 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from .config import settings
-from .models import DietaryPreference, User
+from .models import Admin, DietaryPreference, User
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,21 @@ class DatabaseManager:
                         dietary_preference VARCHAR(10) NOT NULL,
                         preferred_days TEXT[] NOT NULL,
                         is_enrolled BOOLEAN DEFAULT TRUE,
+                        is_verified BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """
+                )
+
+                # Create admin table
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS admins (
+                        id SERIAL PRIMARY KEY,
+                        telegram_id BIGINT UNIQUE NOT NULL,
+                        full_name VARCHAR(255) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
                     )
                 """
                 )
@@ -73,6 +86,7 @@ class DatabaseManager:
                             dietary_preference = EXCLUDED.dietary_preference,
                             preferred_days = EXCLUDED.preferred_days,
                             is_enrolled = TRUE,
+                            is_verified = FALSE,
                             updated_at = CURRENT_TIMESTAMP
                         RETURNING id
                     """,
@@ -118,7 +132,7 @@ class DatabaseManager:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
                         """
-                        SELECT * FROM users WHERE telegram_id = %s AND is_enrolled = TRUE
+                        SELECT * FROM users WHERE telegram_id = %s AND is_enrolled = TRUE AND is_verified = TRUE
                     """,
                         (telegram_id,),
                     )
@@ -134,6 +148,7 @@ class DatabaseManager:
                             ),
                             preferred_days=row["preferred_days"],
                             is_enrolled=row["is_enrolled"],
+                            is_verified=row["is_verified"],
                             created_at=row["created_at"],
                             updated_at=row["updated_at"],
                         )
@@ -149,7 +164,7 @@ class DatabaseManager:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
                         """
-                        SELECT * FROM users WHERE is_enrolled = TRUE
+                        SELECT * FROM users WHERE is_enrolled = TRUE AND is_verified = TRUE
                     """
                     )
 
@@ -165,6 +180,7 @@ class DatabaseManager:
                                 ),
                                 preferred_days=row["preferred_days"],
                                 is_enrolled=row["is_enrolled"],
+                                is_verified=row["is_verified"],
                                 created_at=row["created_at"],
                                 updated_at=row["updated_at"],
                             )
@@ -173,6 +189,70 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error getting enrolled users: {e}")
             return []
+
+    def get_admins(self) -> List[Admin]:
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT * FROM admins
+                    """
+                    )
+
+                    users = []
+                    for row in cursor.fetchall():
+                        users.append(
+                            User(
+                                telegram_id=row["telegram_id"],
+                                full_name=row["full_name"],
+                                email=row["email"],
+                            )
+                        )
+                    return users
+        except Exception as e:
+            logger.error(f"Error getting enrolled users: {e}")
+            return []
+
+    def approve_user(self, telegram_id: int) -> bool:
+        """Mark a user's enrollment as verified."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        UPDATE users
+                        SET is_verified = TRUE, updated_at = CURRENT_TIMESTAMP
+                        WHERE telegram_id = %s AND is_enrolled = TRUE
+                    """,
+                        (telegram_id,),
+                    )
+
+                    conn.commit()
+                    return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error approving user: {e}")
+            return False
+
+    def reject_user(self, telegram_id: int) -> bool:
+        """Reject a user's enrollment by marking them as not enrolled and not verified."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        UPDATE users
+                        SET is_enrolled = FALSE, is_verified = FALSE, updated_at = CURRENT_TIMESTAMP
+                        WHERE telegram_id = %s
+                    """,
+                        (telegram_id,),
+                    )
+
+                    conn.commit()
+                    return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error rejecting user: {e}")
+            return False
 
 
 # Global database manager instance

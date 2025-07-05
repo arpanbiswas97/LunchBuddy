@@ -79,6 +79,12 @@ class LunchBuddyBot:
                 fallbacks=[CommandHandler("cancel", self.cancel_enrollment)],
             )
         )
+        # User verification handler
+        self.application.add_handler(
+            CallbackQueryHandler(
+                self.handle_verification_response, pattern=r"^verify_(yes|no)_(\d+)$"
+            )
+        )
         self.application.add_handler(CommandHandler("unenroll", self.unenroll_command))
 
         self.application.add_error_handler(self.error_handler)
@@ -144,6 +150,7 @@ class LunchBuddyBot:
                 diet=user.dietary_preference.value.title(),
                 days=", ".join(user.preferred_days),
                 enrolled=user.is_enrolled,
+                verified=user.is_verified,
             ).strip()
         )
 
@@ -281,9 +288,6 @@ class LunchBuddyBot:
 
             if db_manager.add_user(user):
                 days_text = ", ".join([day.title() for day in selected_days])
-                available_days_text = ", ".join(
-                    [day.strip().title() for day in settings.lunch_days]
-                )
 
                 await query.edit_message_text(
                     messages.ENROLL_SUCCESS_TEMPLATE.format(
@@ -291,8 +295,6 @@ class LunchBuddyBot:
                         email=user.email,
                         diet=user.dietary_preference.value.title(),
                         days=days_text,
-                        reminder_time=settings.lunch_reminder_time,
-                        days_list=available_days_text,
                     ).strip()
                 )
             else:
@@ -421,7 +423,7 @@ class LunchBuddyBot:
                             logger.info(
                                 f"Booking lunch for user {user.telegram_id} ({user.full_name})"
                             )
-                            await self.book_lunch(user.email, user.dietary_preference)
+                            await self.book_lunch(user)
                         else:
                             await context.bot.send_message(
                                 chat_id=user.telegram_id,
@@ -440,9 +442,82 @@ class LunchBuddyBot:
 
         await asyncio.gather(*tasks)
 
-    async def book_lunch(self, email: str, dietary_preference: DietaryPreference):
+    async def book_lunch(self, user: User):
         browser_automator = BrowserAutomator()
-        await browser_automator.run_all(settings.form_url, email, dietary_preference)
+        await browser_automator.run_all(
+            settings.form_url, user.email, user.dietary_preference
+        )
+
+    async def verify_user(self, user: User, context: ContextTypes.DEFAULT_TYPE):
+        admins = db_manager.get_admins()
+
+        tasks = []
+
+        async def request_verification(admin):
+            try:
+                keyboard = [
+                    [
+                        InlineKeyboardButton(
+                            "✅ Approve", callback_data=f"verify_yes_{user.telegram_id}"
+                        ),
+                        InlineKeyboardButton(
+                            "❌ Reject", callback_data=f"verify_no_{user.telegram_id}"
+                        ),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                days_text = ", ".join([day.title() for day in user.preferred_days])
+                await context.bot.send_message(
+                    chat_id=admin.telegram_id,
+                    text=messages.ENROLL_VERIFICATION_REQUEST_TEMPLATE.format(
+                        telegram_id=user.telegram_id,
+                        name=user.full_name,
+                        email=user.email,
+                        diet=user.dietary_preference.value.title(),
+                        days=days_text,
+                    ).strip(),
+                    reply_markup=reply_markup,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send reminder to {user.telegram_id}")
+                logger.exception(e)
+
+        tasks = [request_verification(admin) for admin in admins]
+
+        await asyncio.gather(*tasks)
+
+    async def handle_verification_response(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        query = update.callback_query
+        await query.answer()
+
+        match = re.match(r"^verify_(yes|no)_(\d+)$", query.data)
+        if not match:
+            await query.edit_message_text("Invalid verification response.")
+            return
+
+        action, telegram_id = match.groups()
+        telegram_id = int(telegram_id)
+
+        if action == "yes":
+            db_manager.approve_user(telegram_id)
+            await query.edit_message_text(
+                messages.ENROLL_APPROVED.format(telegram_id=telegram_id).strip()
+            )
+            await context.bot.send_message(
+                chat_id=telegram_id,
+                text=messages.VERIFY_SUCCESS.strip(),
+            )
+        else:
+            db_manager.reject_user(telegram_id)
+            await query.edit_message_text(
+                messages.ENROLL_REJECTED.format(telegram_id=telegram_id).strip()
+            )
+            await context.bot.send_message(
+                chat_id=telegram_id,
+                text=messages.VERIFY_FAIL.strip(),
+            )
 
     def run(self):
         """Run the bot."""

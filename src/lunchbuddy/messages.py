@@ -27,10 +27,12 @@ Lunch is available on:
 
 You can choose multiple days and set dietary preferences (Veg/Non-Veg).
 
-Daily registration requests are sent at {reminder_time} on the day before each lunch day.
+Daily registration requests are sent at {reminder_time} (UTC) on the day before each lunch day.
 """
 
-STATUS_NOT_ENROLLED = "❌ You are not enrolled for lunch service. Use /enroll to get started!"
+STATUS_NOT_ENROLLED = (
+    "❌ You are not enrolled for lunch service. Use /enroll to get started!"
+)
 STATUS_MESSAGE_TEMPLATE = """
 ✅ Enrollment Status
 
@@ -39,11 +41,14 @@ Email: {email}
 Dietary Preference: {diet}
 Preferred Days: {days}
 Enrolled: {enrolled}
+Verified: {verified}
 """
 
 # Enrollment
 ALREADY_ENROLLED = "❌ You are already enrolled! Use /status to check your details or /unenroll to remove your enrollment."
-ENROLLMENT_WELCOME = "🍽️ Welcome to LunchBuddy enrollment!\n\nPlease provide your full name:"
+ENROLLMENT_WELCOME = (
+    "🍽️ Welcome to LunchBuddy enrollment!\n\nPlease provide your full name:"
+)
 INVALID_NAME = "❌ Please provide a valid full name (at least 2 characters):"
 NAME_ACCEPTED_TEMPLATE = "✅ Name: {name}\n\nPlease provide your work email address:"
 INVALID_EMAIL = "❌ Please provide a valid email address:"
@@ -52,14 +57,14 @@ DIET_ACCEPTED_TEMPLATE = "✅ Dietary Preference: {diet}\n\nPlease select your p
 NO_DAYS_SELECTED = "❌ Please select at least one day for lunch:"
 
 ENROLL_SUCCESS_TEMPLATE = """
-🎉 Enrollment successful!
+🎉 Enrollment details submitted!
 
 Name: {name}
 Email: {email}
 Dietary Preference: {diet}
 Preferred Days: {days}
 
-You'll receive registration requests at {reminder_time} on the day before each lunch day ({days_list}).
+Note: Your enrollment will be reviewed and confirmed internally before activation.
 """
 
 ENROLL_FAILED = "❌ Failed to complete enrollment. Please try again later, or contact support if the issue continues."
@@ -82,7 +87,9 @@ LUNCH_CONFIRMATION_TEMPLATE = """
 🍽️ Do you want lunch for tomorrow??
 """
 
-LUNCH_CONFIRMATION_YES = "Thanks for confirming! Lunch will be arranged for you tomorrow. 🍽️"
+LUNCH_CONFIRMATION_YES = (
+    "Thanks for confirming! Lunch will be arranged for you tomorrow. 🍽️"
+)
 
 LUNCH_CONFIRMATION_NO = "No worries! Lunch will not be arranged for you tomorrow."
 
@@ -97,4 +104,24 @@ LUNCH_TIMEOUT_OPT_OUT = """
 Your lunch will not be arranged for you tomorrow as per your preferences.
 """
 
-LUNCH_CONFIRMATION_EXPIRED = "This confirmation is no longer active or already recorded."
+LUNCH_CONFIRMATION_EXPIRED = (
+    "This confirmation is no longer active or already recorded."
+)
+
+ENROLL_VERIFICATION_REQUEST_TEMPLATE = """
+🔍 New enrollment pending verification:
+
+Telegram ID: {telegram_id}
+Name: {name}
+Email: {email}
+Dietary Preference: {diet}
+Preferred Days: {days}
+
+Please review and verify this enrollment.
+"""
+
+ENROLL_APPROVED = "✅ Enrollment approved for Telegram ID {telegram_id}."
+ENROLL_REJECTED = "❌ Enrollment rejected for Telegram ID {telegram_id}."
+
+VERIFY_SUCCESS = "✅ You're all set! Your enrollment has been verified and activated."
+VERIFY_FAIL = "❌ Your enrollment was not approved. Please contact support if you have questions."
