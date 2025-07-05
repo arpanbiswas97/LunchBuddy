@@ -1,7 +1,7 @@
 users:
-    - telegram_id: 111
+  - telegram_id: 111
     full_name: Alice
     email: alice@example.com
-    - telegram_id: 222
+  - telegram_id: 222
     full_name: Bob
     email: bob@example.com

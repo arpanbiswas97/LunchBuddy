@@ -12,6 +12,7 @@ from ..database import db_manager
 from ..models import DietaryPreference, User
 from .. import messages
 
+
 # -----------------------------------------------------------------------------
 # Helper to load users from tests/test_config.yaml
 # -----------------------------------------------------------------------------
@@ -34,6 +35,7 @@ def load_test_users():
     print(f"[LOAD] Loaded {len(users)} test users from YAML")
     return users
 
+
 # -----------------------------------------------------------------------------
 # Fixture: bot + minimal CallbackContext
 # -----------------------------------------------------------------------------
@@ -49,16 +51,21 @@ def bot_and_ctx(monkeypatch, fake_users):
     dummy = DummyBot()
     ctx = SimpleNamespace(
         bot=dummy,
-        bot_data={LUNCH_CONFIRMATION_KEY: {
-            "positive_response": set(),
-            "negative_response": set(),
-            "window_open": False,
-        }}
+        bot_data={
+            LUNCH_CONFIRMATION_KEY: {
+                "positive_response": set(),
+                "negative_response": set(),
+                "window_open": False,
+            }
+        },
     )
 
     monkeypatch.setattr(db_manager, "get_enrolled_users", lambda: fake_users)
-    print(f"[FIXTURE] Monkeypatched get_enrolled_users to return {len(fake_users)} users")
+    print(
+        f"[FIXTURE] Monkeypatched get_enrolled_users to return {len(fake_users)} users"
+    )
     return bot, ctx
+
 
 # -----------------------------------------------------------------------------
 # Fixture: your YAML‐defined users
@@ -67,6 +74,7 @@ def bot_and_ctx(monkeypatch, fake_users):
 def fake_users():
     users = load_test_users()
     return users
+
 
 # -----------------------------------------------------------------------------
 # Test: “Yes” response goes into positive_response and edits to YES text
@@ -78,13 +86,10 @@ async def test_handle_lunch_response_yes(bot_and_ctx, fake_users):
     print(f"[TEST-YES] Starting YES test for user_id={user.telegram_id}")
 
     cq = SimpleNamespace(
-        data="lunch_yes",
-        answer=AsyncMock(),
-        edit_message_text=AsyncMock()
+        data="lunch_yes", answer=AsyncMock(), edit_message_text=AsyncMock()
     )
     update = SimpleNamespace(
-        effective_user=SimpleNamespace(id=user.telegram_id),
-        callback_query=cq
+        effective_user=SimpleNamespace(id=user.telegram_id), callback_query=cq
     )
 
     ctx.bot_data[LUNCH_CONFIRMATION_KEY]["window_open"] = True
@@ -95,13 +100,16 @@ async def test_handle_lunch_response_yes(bot_and_ctx, fake_users):
     cq.answer.assert_awaited_once()
     print("[TEST-YES] answer() was awaited once")
 
-    cq.edit_message_text.assert_awaited_once_with(messages.LUNCH_CONFIRMATION_YES.strip())
+    cq.edit_message_text.assert_awaited_once_with(
+        messages.LUNCH_CONFIRMATION_YES.strip()
+    )
     print(f"[TEST-YES] edit_message_text() called with YES message")
 
     assert user.telegram_id in ctx.bot_data[LUNCH_CONFIRMATION_KEY]["positive_response"]
     print("[TEST-YES] user_id recorded in positive_response")
 
     print("[TEST-YES] YES response test passed.\n")
+
 
 # -----------------------------------------------------------------------------
 # Test: “No” response goes into negative_response and edits to NO text
@@ -113,13 +121,10 @@ async def test_handle_lunch_response_no(bot_and_ctx, fake_users):
     print(f"[TEST-NO] Starting NO test for user_id={user.telegram_id}")
 
     cq = SimpleNamespace(
-        data="lunch_no",
-        answer=AsyncMock(),
-        edit_message_text=AsyncMock()
+        data="lunch_no", answer=AsyncMock(), edit_message_text=AsyncMock()
     )
     update = SimpleNamespace(
-        effective_user=SimpleNamespace(id=user.telegram_id),
-        callback_query=cq
+        effective_user=SimpleNamespace(id=user.telegram_id), callback_query=cq
     )
 
     ctx.bot_data[LUNCH_CONFIRMATION_KEY]["window_open"] = True
@@ -130,13 +135,16 @@ async def test_handle_lunch_response_no(bot_and_ctx, fake_users):
     cq.answer.assert_awaited_once()
     print("[TEST-NO] answer() was awaited once")
 
-    cq.edit_message_text.assert_awaited_once_with(messages.LUNCH_CONFIRMATION_NO.strip())
+    cq.edit_message_text.assert_awaited_once_with(
+        messages.LUNCH_CONFIRMATION_NO.strip()
+    )
     print(f"[TEST-NO] edit_message_text() called with NO message")
 
     assert user.telegram_id in ctx.bot_data[LUNCH_CONFIRMATION_KEY]["negative_response"]
     print("[TEST-NO] user_id recorded in negative_response")
 
     print("[TEST-NO] NO response test passed.\n")
+
 
 # -----------------------------------------------------------------------------
 # Test: response after window closed edits to EXPIRED and records nothing
@@ -150,11 +158,10 @@ async def test_handle_lunch_response_expired(bot_and_ctx, fake_users):
     cq = SimpleNamespace(
         data="lunch_yes",  # could be yes or no
         answer=AsyncMock(),
-        edit_message_text=AsyncMock()
+        edit_message_text=AsyncMock(),
     )
     update = SimpleNamespace(
-        effective_user=SimpleNamespace(id=user.telegram_id),
-        callback_query=cq
+        effective_user=SimpleNamespace(id=user.telegram_id), callback_query=cq
     )
 
     ctx.bot_data[LUNCH_CONFIRMATION_KEY]["window_open"] = False
@@ -165,11 +172,19 @@ async def test_handle_lunch_response_expired(bot_and_ctx, fake_users):
     cq.answer.assert_awaited_once()
     print("[TEST-EXPIRED] answer() was awaited once")
 
-    cq.edit_message_text.assert_awaited_once_with(messages.LUNCH_CONFIRMATION_EXPIRED.strip())
+    cq.edit_message_text.assert_awaited_once_with(
+        messages.LUNCH_CONFIRMATION_EXPIRED.strip()
+    )
     print(f"[TEST-EXPIRED] edit_message_text() called with EXPIRED message")
 
-    assert user.telegram_id not in ctx.bot_data[LUNCH_CONFIRMATION_KEY]["positive_response"]
-    assert user.telegram_id not in ctx.bot_data[LUNCH_CONFIRMATION_KEY]["negative_response"]
+    assert (
+        user.telegram_id
+        not in ctx.bot_data[LUNCH_CONFIRMATION_KEY]["positive_response"]
+    )
+    assert (
+        user.telegram_id
+        not in ctx.bot_data[LUNCH_CONFIRMATION_KEY]["negative_response"]
+    )
     print("[TEST-EXPIRED] No responses recorded")
 
     print("[TEST-EXPIRED] EXPIRED response test passed.\n")
