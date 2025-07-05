@@ -25,4 +25,12 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
+    "PyYAML>=6.0",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=6.0.0",
+    "pylint>=3.1.0",
+    "mypy>=1.9.0",
+    "black>=24.3.0",
+    "isort>=5.13.2",
+    "pytest-rich==0.2.0"
 ]

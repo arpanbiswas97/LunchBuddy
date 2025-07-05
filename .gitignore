@@ -11,3 +11,6 @@ wheels/
 
 # Environment Variables
 .env
+
+# Test config
+src/lunchbuddy/tests/test_config.yaml
