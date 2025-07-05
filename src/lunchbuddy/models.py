@@ -21,5 +21,14 @@ class User(BaseModel):
     dietary_preference: DietaryPreference
     preferred_days: List[str]
     is_enrolled: bool = True
+    is_verified: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class Admin(BaseModel):
+    """Admin data."""
+
+    telegram_id: int
+    full_name: str
+    email: str
