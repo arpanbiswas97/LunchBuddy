@@ -36,13 +36,13 @@ USER_DATA_KEY = "user_data"
 LUNCH_CONFIRMATION_KEY = "user_confirmation"
 
 PREVIOUS_DAY_MAP = {
-    "tuesday": 0,
-    "wednesday": 1,
-    "thursday": 2,
-    "friday": 3,
-    "saturday": 4,
-    "sunday": 5,
-    "monday": 6,
+    "tuesday": 1,
+    "wednesday": 2,
+    "thursday": 3,
+    "friday": 4,
+    "saturday": 5,
+    "sunday": 6,
+    "monday": 0,
 }
 
 
