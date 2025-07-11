@@ -9,7 +9,6 @@ Available commands:
 • /unenroll - Unenroll from lunch service
 • /status - Check your current enrollment status
 • /help - Show this help message
-• /cancel - Cancel your current enrollment
 • /pause - Pause your lunch service (you won't receive reminders or bookings)
 • /resume - Resume your lunch service (you'll start receiving reminders and bookings again)
 
@@ -24,6 +23,8 @@ Commands:
 • /unenroll - Unenroll from lunch service
 • /status - Check your current enrollment status
 • /help - Show this help message
+• /pause - Pause your lunch service (you won't receive reminders or bookings)
+• /resume - Resume your lunch service (you'll start receiving reminders and bookings again)
 
 Lunch is available on:
 • {days}
