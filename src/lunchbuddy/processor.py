@@ -1,8 +1,10 @@
+import asyncio
 import logging
 
 from playwright.async_api import async_playwright
 
 from .models import DietaryPreference
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ class BrowserAutomator:
 
     async def start(self):
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.browser = await self.playwright.chromium.launch(headless=True, slow_mo=settings.action_delay)
         self.context = await self.browser.new_context()
         await self.context.clear_cookies()
         self.page = await self.context.new_page()
@@ -31,7 +33,7 @@ class BrowserAutomator:
         await self.page.click(selector, timeout=timeout)
 
     async def is_element_with_text_present(
-        self, selector: str, text: str, timeout: int = 3000
+        self, selector: str, text: str, timeout: int = 5000
     ) -> bool:
         try:
             await self.page.wait_for_selector(

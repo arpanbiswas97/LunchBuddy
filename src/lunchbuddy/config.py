@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # Lunch Form Configuration
     form_url: str
+    action_delay: int
 
     class Config:
         env_file = ".env"

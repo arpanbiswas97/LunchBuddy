@@ -406,7 +406,7 @@ class LunchBuddyBot:
                         logger.info(
                             f"Booking lunch for user {user.telegram_id} ({user.full_name})"
                         )
-                        await self.book_lunch(user.email, user.dietary_preference)
+                        await self.book_lunch(user)
                     elif user.telegram_id in no_responders:
                         logger.info(
                             f"User {user.telegram_id} ({user.full_name}) has not opted for lunch tomorrow"
