@@ -167,7 +167,7 @@ class LunchBuddyBot:
         await update.message.reply_text(messages.ENROLLMENT_WELCOME.strip())
 
         return EnrollmentStates.NAME
-    
+
     async def pause_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         user = db_manager.get_user(user_id)
@@ -203,7 +203,6 @@ class LunchBuddyBot:
         db_manager.update_user(user_id, pause=False)
         logger.info(f"User {user_id} has been resumed.")
         await update.message.reply_text(messages.RESUME_SUCCESS.strip())
-
 
     async def get_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = update.message.text.strip()
