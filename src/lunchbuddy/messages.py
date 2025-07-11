@@ -134,3 +134,13 @@ ALREADY_PAUSED = "You are already paused. No reminders or bookings will be made.
 
 RESUME_SUCCESS = "✅ You have resumed. You’ll start receiving reminders and bookings again."
 ALREADY_RESUMED = "You have already resumed registration. You will continue to receive reminders and bookings."
+BOOKING_FAILED_TEMPLATE = """
+❌ Booking Failed
+
+We couldn't complete your lunch booking due to an unexpected issue. We're sorry for the inconvenience caused.
+
+You can still book lunch manually using the form below:
+{form_url}
+
+If the problem continues, please contact support. Thanks for your understanding!
+"""
