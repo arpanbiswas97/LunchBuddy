@@ -124,3 +124,14 @@ ENROLL_REJECTED = "❌ Enrollment rejected for Telegram ID {telegram_id}."
 
 VERIFY_SUCCESS = "✅ You're all set! Your enrollment has been verified and activated."
 VERIFY_FAIL = "❌ Your enrollment was not approved. Please contact support if you have questions."
+
+BOOKING_FAILED_TEMPLATE = """
+❌ Booking Failed
+
+We couldn't complete your lunch booking due to an unexpected issue. We're sorry for the inconvenience caused.
+
+You can still book lunch manually using the form below:
+{form_url}
+
+If the problem continues, please contact support. Thanks for your understanding!
+"""

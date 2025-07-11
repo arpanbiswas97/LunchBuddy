@@ -148,7 +148,7 @@ class LunchBuddyBot:
                 name=user.full_name,
                 email=user.email,
                 diet=user.dietary_preference.value.title(),
-                days=", ".join(user.preferred_days),
+                days=", ".join([d.title() for d in user.preferred_days]),
                 enrolled=user.is_enrolled,
                 verified=user.is_verified,
             ).strip()
@@ -406,7 +406,7 @@ class LunchBuddyBot:
                         logger.info(
                             f"Booking lunch for user {user.telegram_id} ({user.full_name})"
                         )
-                        await self.book_lunch(user)
+                        await self.book_lunch(user, context)
                     elif user.telegram_id in no_responders:
                         logger.info(
                             f"User {user.telegram_id} ({user.full_name}) has not opted for lunch tomorrow"
@@ -420,7 +420,7 @@ class LunchBuddyBot:
                             logger.info(
                                 f"Booking lunch for user {user.telegram_id} ({user.full_name})"
                             )
-                            await self.book_lunch(user)
+                            await self.book_lunch(user, context)
                         else:
                             await context.bot.send_message(
                                 chat_id=user.telegram_id,
@@ -439,11 +439,18 @@ class LunchBuddyBot:
 
         await asyncio.gather(*tasks)
 
-    async def book_lunch(self, user: User):
+    async def book_lunch(self, user: User, context: ContextTypes.DEFAULT_TYPE):
         browser_automator = BrowserAutomator()
-        await browser_automator.run_all(
+        success_status = await browser_automator.fill_form(
             settings.form_url, user.email, user.dietary_preference
         )
+        if not success_status:
+            await context.bot.send_message(
+                chat_id=user.telegram_id,
+                text=messages.BOOKING_FAILED_TEMPLATE.format(
+                    form_url=settings.form_url
+                ).strip(),
+            )
 
     async def verify_user(self, user: User, context: ContextTypes.DEFAULT_TYPE):
         admins = db_manager.get_admins()
