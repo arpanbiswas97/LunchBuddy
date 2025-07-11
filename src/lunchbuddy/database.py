@@ -49,6 +49,7 @@ class DatabaseManager:
                         preferred_days TEXT[] NOT NULL,
                         is_enrolled BOOLEAN DEFAULT TRUE,
                         is_verified BOOLEAN DEFAULT FALSE,
+                        pause BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
@@ -87,6 +88,7 @@ class DatabaseManager:
                             preferred_days = EXCLUDED.preferred_days,
                             is_enrolled = TRUE,
                             is_verified = FALSE,
+                            pause = FALSE,
                             updated_at = CURRENT_TIMESTAMP
                         RETURNING id
                     """,
@@ -149,6 +151,7 @@ class DatabaseManager:
                             preferred_days=row["preferred_days"],
                             is_enrolled=row["is_enrolled"],
                             is_verified=row["is_verified"],
+                            pause=row["pause"],
                             created_at=row["created_at"],
                             updated_at=row["updated_at"],
                         )
@@ -164,7 +167,7 @@ class DatabaseManager:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
                         """
-                        SELECT * FROM users WHERE is_enrolled = TRUE AND is_verified = TRUE
+                        SELECT * FROM users WHERE is_enrolled = TRUE AND is_verified = TRUE AND pause = FALSE
                     """
                     )
 
@@ -181,6 +184,7 @@ class DatabaseManager:
                                 preferred_days=row["preferred_days"],
                                 is_enrolled=row["is_enrolled"],
                                 is_verified=row["is_verified"],
+                                pause=row["pause"],
                                 created_at=row["created_at"],
                                 updated_at=row["updated_at"],
                             )
@@ -252,6 +256,32 @@ class DatabaseManager:
                     return cursor.rowcount > 0
         except Exception as e:
             logger.error(f"Error rejecting user: {e}")
+            return False
+        
+    def update_user(self, telegram_id: int, **fields) -> bool:
+        """Generic method to update user fields."""
+        if not fields:
+            logger.warning("No fields provided for update_user")
+            return False
+
+        set_clause = ", ".join([f"{key} = %s" for key in fields])
+        values = list(fields.values())
+
+        query = f"""
+            UPDATE users
+            SET {set_clause}, updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_id = %s
+        """
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query, values + [telegram_id])
+                    conn.commit()
+                    return cursor.rowcount > 0
+            logger.info(f"User {telegram_id} updated successfully with fields: {fields}")
+        except Exception as e:
+            logger.error(f"Error updating user {telegram_id}: {e}")
             return False
 
 

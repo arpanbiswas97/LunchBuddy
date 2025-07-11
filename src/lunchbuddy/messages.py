@@ -9,6 +9,9 @@ Available commands:
 • /unenroll - Unenroll from lunch service
 • /status - Check your current enrollment status
 • /help - Show this help message
+• /cancel - Cancel your current enrollment
+• /pause - Pause your lunch service (you won't receive reminders or bookings)
+• /resume - Resume your lunch service (you'll start receiving reminders and bookings again)
 
 Let's get started! Use /enroll to begin your enrollment.
 """
@@ -42,6 +45,7 @@ Dietary Preference: {diet}
 Preferred Days: {days}
 Enrolled: {enrolled}
 Verified: {verified}
+Registration paused: {pause}
 """
 
 # Enrollment
@@ -124,3 +128,9 @@ ENROLL_REJECTED = "❌ Enrollment rejected for Telegram ID {telegram_id}."
 
 VERIFY_SUCCESS = "✅ You're all set! Your enrollment has been verified and activated."
 VERIFY_FAIL = "❌ Your enrollment was not approved. Please contact support if you have questions."
+
+PAUSE_SUCCESS = "✅ You have been paused. You won’t receive reminders or bookings until you resume."
+ALREADY_PAUSED = "You are already paused. No reminders or bookings will be made."
+
+RESUME_SUCCESS = "✅ You have resumed. You’ll start receiving reminders and bookings again."
+ALREADY_RESUMED = "You have already resumed registration. You will continue to receive reminders and bookings."

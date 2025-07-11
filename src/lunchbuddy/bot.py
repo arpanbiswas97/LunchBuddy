@@ -87,6 +87,9 @@ class LunchBuddyBot:
         )
         self.application.add_handler(CommandHandler("unenroll", self.unenroll_command))
 
+        self.application.add_handler(CommandHandler("pause", self.pause_command))
+        self.application.add_handler(CommandHandler("resume", self.resume_command))
+
         self.application.add_error_handler(self.error_handler)
 
         self.application.bot_data[LUNCH_CONFIRMATION_KEY] = {
@@ -151,6 +154,7 @@ class LunchBuddyBot:
                 days=", ".join(user.preferred_days),
                 enrolled=user.is_enrolled,
                 verified=user.is_verified,
+                pause="Yes" if user.pause else "No",
             ).strip()
         )
 
@@ -163,6 +167,43 @@ class LunchBuddyBot:
         await update.message.reply_text(messages.ENROLLMENT_WELCOME.strip())
 
         return EnrollmentStates.NAME
+    
+    async def pause_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        user = db_manager.get_user(user_id)
+
+        if not user:
+            logger.info(f"User {user_id} is not enrolled.")
+            await update.message.reply_text(messages.STATUS_NOT_ENROLLED.strip())
+            return
+
+        if user.pause:
+            await update.message.reply_text(messages.ALREADY_PAUSED.strip())
+            logger.info(f"User {user_id} is already paused.")
+            return
+
+        db_manager.update_user(user_id, pause=True)
+        logger.info(f"User {user_id} has been paused.")
+        await update.message.reply_text(messages.PAUSE_SUCCESS.strip())
+
+    async def resume_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        user = db_manager.get_user(user_id)
+
+        if not user:
+            logger.info(f"User {user_id} is not enrolled.")
+            await update.message.reply_text(messages.STATUS_NOT_ENROLLED.strip())
+            return
+
+        if not user.pause:
+            logger.info(f"User {user_id} is not paused.")
+            await update.message.reply_text(messages.ALREADY_RESUMED.strip())
+            return
+
+        db_manager.update_user(user_id, pause=False)
+        logger.info(f"User {user_id} has been resumed.")
+        await update.message.reply_text(messages.RESUME_SUCCESS.strip())
+
 
     async def get_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = update.message.text.strip()

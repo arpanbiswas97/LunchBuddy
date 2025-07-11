@@ -22,6 +22,7 @@ class User(BaseModel):
     preferred_days: List[str]
     is_enrolled: bool = True
     is_verified: bool = False
+    pause: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
